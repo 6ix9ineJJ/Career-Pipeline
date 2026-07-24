@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+
+*.log
+.env
+
+career_pipeline.db
+*.sqlite
+*.sqlite3
+
+.streamlit/secrets.toml
