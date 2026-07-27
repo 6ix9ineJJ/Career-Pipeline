@@ -46,6 +46,37 @@ STATUS_LABELS = {
 
 NAV_ITEMS = ["Dashboard", "Jobs", "Candidates", "Messages", "Company", "Settings"]
 
+SAMPLE_CANDIDATES = [
+    {
+        "name": "Ayesha Khan",
+        "role": "Junior Python Developer",
+        "location": "Lahore, PK",
+        "stage": "Screening",
+        "experience": "1 year",
+    },
+    {
+        "name": "Bilal Ahmed",
+        "role": "FastAPI Backend Intern",
+        "location": "Remote",
+        "stage": "Interview",
+        "experience": "6 months",
+    },
+    {
+        "name": "Hira Malik",
+        "role": "SQLAlchemy Trainee",
+        "location": "Karachi, PK",
+        "stage": "Applied",
+        "experience": "Entry level",
+    },
+    {
+        "name": "Omar Farooq",
+        "role": "Full Stack Developer",
+        "location": "Islamabad, PK",
+        "stage": "Tests",
+        "experience": "2 years",
+    },
+]
+
 st.set_page_config(page_title="Career Pipeline", page_icon=":briefcase:", layout="wide")
 
 st.markdown(
@@ -403,10 +434,20 @@ st.markdown(
         transition: border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
     }
 
+    .candidate-card-link {
+        display: block;
+        text-decoration: none !important;
+    }
+
     .candidate-card:hover {
         border-color: #bfdbfe;
         box-shadow: 0 14px 28px rgba(37, 99, 235, 0.08);
         transform: translateY(-1px);
+    }
+
+    .candidate-card-link:focus .candidate-card {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
     }
 
     .card-main {
@@ -1015,7 +1056,7 @@ st.markdown(
     }
 
     .stCheckbox span[data-baseweb="checkbox"][aria-checked="true"] {
-        background: #2563eb !important;
+        background: #ffffff !important;
         border-color: #2563eb !important;
     }
 
@@ -1031,6 +1072,18 @@ st.markdown(
     .stCheckbox span[data-baseweb="checkbox"] svg {
         color: #ffffff !important;
         fill: #ffffff !important;
+    }
+
+    .stCheckbox [role="checkbox"][aria-checked="false"],
+    .stCheckbox div[data-baseweb="checkbox"][aria-checked="false"],
+    .stCheckbox span[data-baseweb="checkbox"][aria-checked="false"],
+    .stCheckbox [role="checkbox"][aria-checked="false"] > div,
+    .stCheckbox div[data-baseweb="checkbox"][aria-checked="false"] > div,
+    .stCheckbox span[data-baseweb="checkbox"][aria-checked="false"] > div {
+        background: #ffffff !important;
+        background-color: #ffffff !important;
+        border-color: #cbd5e1 !important;
+        color: #ffffff !important;
     }
 
     .stToggle label {
@@ -1391,6 +1444,16 @@ if "active_nav" not in st.session_state:
     st.session_state.active_nav = "Dashboard"
 
 
+def selected_job_id() -> int | None:
+    selected = st.query_params.get("selected_job")
+    if isinstance(selected, list):
+        selected = selected[0] if selected else None
+    try:
+        return int(selected) if selected else None
+    except (TypeError, ValueError):
+        return None
+
+
 def auth_headers() -> dict[str, str]:
     return {"Authorization": f"Bearer {st.session_state.token}"}
 
@@ -1556,7 +1619,9 @@ def render_candidate_card(application: dict) -> str:
     title = escape(application["job_title"])
     location = escape(application.get("location") or "View profile")
     card_initials = initials(application["job_title"], application["company_name"])
+    application_id = application["id"]
     return dedent(f"""
+    <a class="candidate-card-link" href="?selected_job={application_id}">
     <div class="candidate-card">
         <div class="card-main">
             <span class="card-avatar">{card_initials}</span>
@@ -1567,6 +1632,7 @@ def render_candidate_card(application: dict) -> str:
         </div>
         <div class="card-age">{relative_label(application)} - {location}</div>
     </div>
+    </a>
     """).strip()
 
 
@@ -1602,6 +1668,41 @@ def render_pipeline(applications: list[dict]) -> None:
 
     st.markdown(
         f"<div class='pipeline-board'>{''.join(columns_html)}</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def render_selected_application_details(applications: list[dict]) -> None:
+    application_id = selected_job_id()
+    if application_id is None:
+        return
+
+    application = next((item for item in applications if item["id"] == application_id), None)
+    if application is None:
+        return
+
+    company = escape(application["company_name"])
+    title = escape(application["job_title"])
+    status = escape(STATUS_LABELS.get(application["status"], application["status"]))
+    location = escape(application.get("location") or "Not added")
+    salary = escape(application.get("salary_range") or "Not added")
+    applied_date = escape(format_date(application.get("applied_date")))
+    notes = escape(application.get("notes") or "No notes added.")
+
+    st.markdown(
+        dedent(f"""
+        <div class="placeholder-card">
+            <span class="placeholder-icon">{initials(application["job_title"], application["company_name"])}</span>
+            <div>
+                <div class="placeholder-title">{company} - {title}</div>
+                <div class="placeholder-copy">
+                    Status: {status} &nbsp; | &nbsp; Location: {location} &nbsp; | &nbsp; Salary: {salary}
+                </div>
+                <div class="placeholder-copy">Applied date: {applied_date}</div>
+                <div class="placeholder-copy">Notes: {notes}</div>
+            </div>
+        </div>
+        """).strip(),
         unsafe_allow_html=True,
     )
 
@@ -1650,6 +1751,36 @@ def render_placeholder_view(title: str) -> None:
             </div>
         </div>
         """).strip(),
+        unsafe_allow_html=True,
+    )
+
+
+def render_candidates_view() -> None:
+    cards = []
+    for candidate in SAMPLE_CANDIDATES:
+        name = escape(candidate["name"])
+        role = escape(candidate["role"])
+        location = escape(candidate["location"])
+        stage = escape(candidate["stage"])
+        experience = escape(candidate["experience"])
+        avatar = initials(candidate["name"])
+        cards.append(
+            dedent(f"""
+            <div class="candidate-card">
+                <div class="card-main">
+                    <span class="card-avatar">{avatar}</span>
+                    <div>
+                        <div class="candidate-name">{name}</div>
+                        <div class="profile-link">{role}</div>
+                    </div>
+                </div>
+                <div class="card-age">{location} - {experience} - {stage}</div>
+            </div>
+            """).strip()
+        )
+
+    st.markdown(
+        f"<div class='pipeline-board'>{''.join(cards)}</div>",
         unsafe_allow_html=True,
     )
 
@@ -1784,24 +1915,10 @@ def render_editors(applications: list[dict]) -> None:
                 "<div class='delete-warning'>Deleting is permanent. Tick the confirmation box before using Delete Job.</div>",
                 unsafe_allow_html=True,
             )
-            confirm_delete = st.session_state[confirm_key]
-            confirm_cols = st.columns([0.1, 0.9], gap="small")
-            with confirm_cols[0]:
-                st.markdown("<div class='delete-box-spacer'></div>", unsafe_allow_html=True)
-                box_label = "✓" if confirm_delete else " "
-                if st.button(
-                    box_label,
-                    key=f"confirm_delete_box_{application['id']}",
-                    type="primary" if confirm_delete else "secondary",
-                    use_container_width=True,
-                ):
-                    st.session_state[confirm_key] = not confirm_delete
-                    st.rerun()
-            with confirm_cols[1]:
-                st.markdown(
-                    "<div class='delete-confirm-row'><span class='delete-confirm-text'>I understand and want to delete this job</span></div>",
-                    unsafe_allow_html=True,
-                )
+            confirm_delete = st.checkbox(
+                "I understand and want to delete this job",
+                key=confirm_key,
+            )
 
             delete_submit = st.button(
                 "Delete job",
@@ -2016,13 +2133,17 @@ def render_dashboard() -> None:
 
         if active_nav == "Dashboard":
             render_pipeline(filtered_applications)
+            render_selected_application_details(filtered_applications)
         elif active_nav == "Jobs":
             pipeline_col, form_col = st.columns([1.25, 0.75], gap="small")
             with pipeline_col:
                 render_pipeline(filtered_applications)
+                render_selected_application_details(filtered_applications)
             with form_col:
                 handle_create_application()
                 render_editors(filtered_applications)
+        elif active_nav == "Candidates":
+            render_candidates_view()
         else:
             render_placeholder_view(active_nav)
 
