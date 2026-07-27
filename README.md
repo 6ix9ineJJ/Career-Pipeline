@@ -4,6 +4,10 @@ Career Pipeline is a job application tracking project built with FastAPI, SQLite
 
 The app allows users to register, log in, and manage job applications through a clean dashboard with full CRUD functionality.
 
+## Project Visual
+
+![Career Pipeline project flow](assets/project-pipeline-diagram.svg)
+
 ## Tech Stack
 
 - Backend: FastAPI
