@@ -16,7 +16,17 @@ def configured_api_url() -> str:
     return str(value).rstrip("/")
 
 
+def configured_demo_mode() -> bool:
+    try:
+        value = st.secrets["DEMO_MODE"]
+    except Exception:
+        value = os.getenv("DEMO_MODE", "false")
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
+
 API_URL = configured_api_url()
+DEMO_MODE = configured_demo_mode()
+DEMO_TOKEN = "demo-streamlit-token"
 AUTH_HERO_IMAGE = Path(__file__).parent / "assets" / "auth-career-hero.png"
 AUTH_HERO_IMAGE_DATA = base64.b64encode(AUTH_HERO_IMAGE.read_bytes()).decode("ascii")
 
@@ -83,6 +93,42 @@ SAMPLE_CANDIDATES = [
         "location": "Islamabad, PK",
         "stage": "Tests",
         "experience": "2 years",
+    },
+]
+
+DEMO_APPLICATIONS = [
+    {
+        "id": 1,
+        "company_name": "Nolyth",
+        "job_title": "Lead AI Engineer",
+        "status": "Applied",
+        "location": "Lahore",
+        "salary_range": "PKR 120k - 180k",
+        "applied_date": date.today().isoformat(),
+        "notes": "Prepare FastAPI and SQLAlchemy explanation.",
+        "created_at": date.today().isoformat(),
+    },
+    {
+        "id": 2,
+        "company_name": "BluePeak",
+        "job_title": "Entry Level Python Engineer",
+        "status": "Screening",
+        "location": "Remote",
+        "salary_range": "Not shared",
+        "applied_date": "2026-07-06",
+        "notes": "First interview scheduled. Prepare JWT explanation.",
+        "created_at": "2026-07-06",
+    },
+    {
+        "id": 3,
+        "company_name": "OrbitWorks",
+        "job_title": "Junior Full Stack Developer",
+        "status": "Accepted",
+        "location": "Remote",
+        "salary_range": "PKR 150k",
+        "applied_date": "2026-07-05",
+        "notes": "Accepted offer for demo data.",
+        "created_at": "2026-07-05",
     },
 ]
 
@@ -1451,6 +1497,10 @@ if "auth_error" not in st.session_state:
     st.session_state.auth_error = None
 if "active_nav" not in st.session_state:
     st.session_state.active_nav = "Dashboard"
+if "demo_username" not in st.session_state:
+    st.session_state.demo_username = "usman"
+if "demo_applications" not in st.session_state:
+    st.session_state.demo_applications = [item.copy() for item in DEMO_APPLICATIONS]
 
 
 def selected_job_id() -> int | None:
@@ -1461,6 +1511,10 @@ def selected_job_id() -> int | None:
         return int(selected) if selected else None
     except (TypeError, ValueError):
         return None
+
+
+def is_demo_session() -> bool:
+    return DEMO_MODE or st.session_state.token == DEMO_TOKEN
 
 
 def auth_headers() -> dict[str, str]:
@@ -1509,11 +1563,18 @@ def relative_label(application: dict) -> str:
 
 
 def fetch_applications() -> list[dict]:
-    response = requests.get(
-        f"{API_URL}/applications",
-        headers=auth_headers(),
-        timeout=10,
-    )
+    if is_demo_session():
+        return st.session_state.demo_applications
+
+    try:
+        response = requests.get(
+            f"{API_URL}/applications",
+            headers=auth_headers(),
+            timeout=10,
+        )
+    except requests.RequestException:
+        st.error("Could not connect to the backend API.")
+        return []
     if response.ok:
         return response.json()
     st.error(api_error_message(response, "Could not load applications"))
@@ -1521,11 +1582,18 @@ def fetch_applications() -> list[dict]:
 
 
 def fetch_current_user() -> dict:
-    response = requests.get(
-        f"{API_URL}/auth/me",
-        headers=auth_headers(),
-        timeout=10,
-    )
+    if is_demo_session():
+        return {"username": st.session_state.demo_username}
+
+    try:
+        response = requests.get(
+            f"{API_URL}/auth/me",
+            headers=auth_headers(),
+            timeout=10,
+        )
+    except requests.RequestException:
+        st.error("Could not connect to the backend API.")
+        return {"username": "User"}
     if response.ok:
         return response.json()
     st.error(api_error_message(response, "Could not load profile"))
@@ -1832,20 +1900,37 @@ def handle_create_application() -> None:
         create_submit = st.form_submit_button("Create Job", use_container_width=True)
 
     if create_submit:
-        response = requests.post(
-            f"{API_URL}/applications",
-            json={
-                "company_name": company_name,
-                "job_title": job_title,
-                "status": status,
-                "location": location or None,
-                "salary_range": salary_range or None,
-                "applied_date": applied_date.isoformat() if applied_date else None,
-                "notes": notes or None,
-            },
-            headers=auth_headers(),
-            timeout=10,
-        )
+        payload = {
+            "company_name": company_name,
+            "job_title": job_title,
+            "status": status,
+            "location": location or None,
+            "salary_range": salary_range or None,
+            "applied_date": applied_date.isoformat() if applied_date else None,
+            "notes": notes or None,
+        }
+        if is_demo_session():
+            next_id = max((item["id"] for item in st.session_state.demo_applications), default=0) + 1
+            st.session_state.demo_applications.append(
+                {
+                    "id": next_id,
+                    "created_at": date.today().isoformat(),
+                    **payload,
+                }
+            )
+            st.success("Application added.")
+            st.rerun()
+
+        try:
+            response = requests.post(
+                f"{API_URL}/applications",
+                json=payload,
+                headers=auth_headers(),
+                timeout=10,
+            )
+        except requests.RequestException:
+            st.error("Could not connect to the backend API.")
+            return
         if response.ok:
             st.success("Application added.")
             st.rerun()
@@ -1937,20 +2022,33 @@ def render_editors(applications: list[dict]) -> None:
             confirm_delete = st.session_state[confirm_key]
 
             if save_submit:
-                update_response = requests.put(
-                    f"{API_URL}/applications/{application['id']}",
-                    json={
-                        "company_name": edit_company,
-                        "job_title": edit_title,
-                        "status": edit_status,
-                        "location": edit_location or None,
-                        "salary_range": edit_salary or None,
-                        "applied_date": edit_applied_date.isoformat() if edit_applied_date else None,
-                        "notes": edit_notes or None,
-                    },
-                    headers=auth_headers(),
-                    timeout=10,
-                )
+                payload = {
+                    "company_name": edit_company,
+                    "job_title": edit_title,
+                    "status": edit_status,
+                    "location": edit_location or None,
+                    "salary_range": edit_salary or None,
+                    "applied_date": edit_applied_date.isoformat() if edit_applied_date else None,
+                    "notes": edit_notes or None,
+                }
+                if is_demo_session():
+                    st.session_state.demo_applications = [
+                        {**item, **payload} if item["id"] == application["id"] else item
+                        for item in st.session_state.demo_applications
+                    ]
+                    st.success("Application updated.")
+                    st.rerun()
+
+                try:
+                    update_response = requests.put(
+                        f"{API_URL}/applications/{application['id']}",
+                        json=payload,
+                        headers=auth_headers(),
+                        timeout=10,
+                    )
+                except requests.RequestException:
+                    st.error("Could not connect to the backend API.")
+                    return
                 if update_response.ok:
                     st.success("Application updated.")
                     st.rerun()
@@ -1961,11 +2059,24 @@ def render_editors(applications: list[dict]) -> None:
                 if not confirm_delete:
                     st.warning("Please confirm before deleting this job.")
                 else:
-                    delete_response = requests.delete(
-                        f"{API_URL}/applications/{application['id']}",
-                        headers=auth_headers(),
-                        timeout=10,
-                    )
+                    if is_demo_session():
+                        st.session_state.demo_applications = [
+                            item
+                            for item in st.session_state.demo_applications
+                            if item["id"] != application["id"]
+                        ]
+                        st.success("Application deleted.")
+                        st.rerun()
+
+                    try:
+                        delete_response = requests.delete(
+                            f"{API_URL}/applications/{application['id']}",
+                            headers=auth_headers(),
+                            timeout=10,
+                        )
+                    except requests.RequestException:
+                        st.error("Could not connect to the backend API.")
+                        return
                     if delete_response.ok:
                         st.success("Application deleted.")
                         st.rerun()
@@ -2012,17 +2123,33 @@ def render_auth_screen() -> None:
                 )
 
                 if login_submit:
-                    response = requests.post(
-                        f"{API_URL}/auth/token",
-                        data={"username": login_username, "password": login_password},
-                        timeout=10,
-                    )
-                    if response.ok:
+                    if DEMO_MODE:
+                        if login_username == "usman" and login_password == "12345678":
+                            st.session_state.auth_error = None
+                            st.session_state.demo_username = login_username
+                            st.session_state.token = DEMO_TOKEN
+                            st.toast("Logged in successfully.")
+                            st.rerun()
+                        else:
+                            st.session_state.auth_error = "Invalid username or password."
+                    else:
+                        try:
+                            response = requests.post(
+                                f"{API_URL}/auth/token",
+                                data={"username": login_username, "password": login_password},
+                                timeout=10,
+                            )
+                        except requests.RequestException:
+                            st.session_state.auth_error = "Could not connect to the backend API."
+                            response = None
+                    if DEMO_MODE:
+                        pass
+                    elif response and response.ok:
                         st.session_state.auth_error = None
                         st.session_state.token = response.json()["access_token"]
                         st.toast("Logged in successfully.")
                         st.rerun()
-                    else:
+                    elif response is not None:
                         st.session_state.auth_error = api_error_message(
                             response,
                             "Invalid username or password.",
@@ -2063,18 +2190,29 @@ def render_auth_screen() -> None:
                 )
 
                 if register_submit:
-                    response = requests.post(
-                        f"{API_URL}/auth/register",
-                        json={"username": register_username, "password": register_password},
-                        timeout=10,
-                    )
-                    if response.ok:
+                    if DEMO_MODE:
                         st.session_state.auth_error = None
-                        st.toast("Account created. You can log in now.")
-                        st.session_state.auth_mode = "Login"
+                        st.session_state.demo_username = register_username or "demo"
+                        st.session_state.token = DEMO_TOKEN
+                        st.toast("Account created.")
                         st.rerun()
                     else:
-                        st.session_state.auth_error = api_error_message(response, "Registration failed")
+                        try:
+                            response = requests.post(
+                                f"{API_URL}/auth/register",
+                                json={"username": register_username, "password": register_password},
+                                timeout=10,
+                            )
+                        except requests.RequestException:
+                            st.session_state.auth_error = "Could not connect to the backend API."
+                            response = None
+                        if response and response.ok:
+                            st.session_state.auth_error = None
+                            st.toast("Account created. You can log in now.")
+                            st.session_state.auth_mode = "Login"
+                            st.rerun()
+                        elif response is not None:
+                            st.session_state.auth_error = api_error_message(response, "Registration failed")
 
                 if st.session_state.auth_error:
                     st.markdown(
