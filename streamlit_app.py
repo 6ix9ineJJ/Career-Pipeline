@@ -1,4 +1,5 @@
 ﻿import base64
+import os
 from datetime import date
 from html import escape
 from pathlib import Path
@@ -7,7 +8,15 @@ from textwrap import dedent
 import requests
 import streamlit as st
 
-API_URL = "http://127.0.0.1:8000"
+def configured_api_url() -> str:
+    try:
+        value = st.secrets["API_URL"]
+    except Exception:
+        value = os.getenv("API_URL", "http://127.0.0.1:8000")
+    return str(value).rstrip("/")
+
+
+API_URL = configured_api_url()
 AUTH_HERO_IMAGE = Path(__file__).parent / "assets" / "auth-career-hero.png"
 AUTH_HERO_IMAGE_DATA = base64.b64encode(AUTH_HERO_IMAGE.read_bytes()).decode("ascii")
 
