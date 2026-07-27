@@ -957,6 +957,40 @@ st.markdown(
         padding: 0.8rem 0.9rem;
     }
 
+    .stCheckbox label {
+        align-items: center !important;
+        color: #475467 !important;
+        display: flex !important;
+        gap: 0.55rem !important;
+        min-height: 1.8rem !important;
+    }
+
+    .stCheckbox label p {
+        color: #475467 !important;
+        font-size: 0.88rem !important;
+        font-weight: 650 !important;
+        margin: 0 !important;
+    }
+
+    .stCheckbox span[data-baseweb="checkbox"] {
+        background: #ffffff !important;
+        border: 1.5px solid #cbd5e1 !important;
+        border-radius: 6px !important;
+        box-shadow: none !important;
+        height: 1.05rem !important;
+        width: 1.05rem !important;
+    }
+
+    .stCheckbox span[data-baseweb="checkbox"][aria-checked="true"] {
+        background: #2563eb !important;
+        border-color: #2563eb !important;
+    }
+
+    .stCheckbox span[data-baseweb="checkbox"] svg {
+        color: #ffffff !important;
+        fill: #ffffff !important;
+    }
+
     div[data-testid="stVerticalBlock"] > div:has(> div[data-testid="stHorizontalBlock"]) {
         row-gap: 0.75rem;
     }
