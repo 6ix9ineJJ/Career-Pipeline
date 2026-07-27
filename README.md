@@ -1,78 +1,62 @@
 # Career Pipeline
 
-Career Pipeline is a bootcamp-friendly CRUD project for managing job applications.
+Career Pipeline is a job application tracking project built with FastAPI, SQLite, SQLAlchemy, JWT authentication, and Streamlit.
 
-It covers:
+The app allows users to register, log in, and manage job applications through a clean dashboard with full CRUD functionality.
 
-- Python project structure
-- FastAPI backend development
-- Pydantic request/response validation
-- SQLAlchemy database models
-- SQLite database storage
-- JWT authentication
-- CRUD operations
-- Streamlit frontend
-- GitHub README documentation
+## Tech Stack
 
-## Project Features
+- Backend: FastAPI
+- Frontend: Streamlit
+- Database: SQLite
+- ORM: SQLAlchemy
+- Authentication: JWT
+- Validation: Pydantic
 
-- Register a new user
-- Log in with username and password
-- Add job applications
-- View all job applications
-- Update application status and notes
-- Delete old applications
+## Features
 
-## Application Status Flow
+- User registration
+- User login with JWT authentication
+- Protected current-user route
+- Create job applications
+- View job applications
+- Update job applications
+- Delete job applications
+- Pipeline-style dashboard
+- Search and status filtering
+- Streamlit frontend connected to FastAPI APIs
 
-Example statuses:
-
-- Saved
-- Applied
-- Screening
-- Interview
-- Technical Round
-- Offer
-- Rejected
-- Accepted
-
-## Setup
-
-```bash
-python -m venv venv
-venv\Scripts\activate
-pip install -r requirement.txt
-```
-
-## Run The FastAPI Backend
-
-```bash
-uvicorn app.main:app --reload
-```
-
-Open the Swagger API docs:
+## Project Flow
 
 ```text
-http://127.0.0.1:8000/docs
+User opens Streamlit app
+↓
+User registers or logs in
+↓
+FastAPI validates credentials
+↓
+Backend returns JWT token
+↓
+Streamlit stores token in session_state
+↓
+Frontend calls protected APIs with the token
+↓
+Dashboard loads and manages job applications
 ```
 
-## Run The Streamlit Frontend
+## API Endpoints
 
-Open a second terminal, activate the same virtual environment, then run:
-
-```bash
-streamlit run streamlit_app.py
+```text
+GET    /
+POST   /auth/register
+POST   /auth/token
+GET    /auth/me
+GET    /applications
+POST   /applications
+GET    /applications/{application_id}
+PUT    /applications/{application_id}
+DELETE /applications/{application_id}
 ```
-
-## Main API Endpoints
-
-- `POST /auth/register` - create a user account
-- `POST /auth/token` - log in and receive a JWT token
-- `GET /applications` - list job applications
-- `POST /applications` - create a job application
-- `GET /applications/{application_id}` - view one job application
-- `PUT /applications/{application_id}` - update a job application
-- `DELETE /applications/{application_id}` - delete a job application
 
 ## Folder Structure
 
@@ -86,11 +70,80 @@ app/
   routers/
     auth.py
     applications.py
+assets/
+  auth-career-hero.png
 streamlit_app.py
 requirement.txt
 README.md
 ```
 
-## Bootcamp Explanation
+## Setup
 
-FastAPI creates the API routes, Pydantic validates incoming data, SQLAlchemy talks to the SQLite database, JWT protects private routes, and Streamlit provides a simple user interface.
+Create and activate a virtual environment:
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+```
+
+Install dependencies:
+
+```bash
+pip install -r requirement.txt
+```
+
+## Run Backend
+
+```bash
+uvicorn app.main:app --reload
+```
+
+Backend runs at:
+
+```text
+http://127.0.0.1:8000
+```
+
+Swagger docs:
+
+```text
+http://127.0.0.1:8000/docs
+```
+
+## Run Frontend
+
+Open a second terminal and run:
+
+```bash
+streamlit run streamlit_app.py
+```
+
+Frontend runs at:
+
+```text
+http://127.0.0.1:8501
+```
+
+## Demo Login
+
+```text
+username: usman
+password: 12345678
+```
+
+## Core Concepts Covered
+
+- FastAPI routing and endpoints
+- Pydantic schemas for validation
+- SQLAlchemy models and sessions
+- SQLite database integration
+- JWT token creation and verification
+- Password hashing
+- Protected API routes
+- Streamlit session state
+- Frontend-to-backend API integration
+- CRUD operations
+
+## Status
+
+The project currently includes working authentication, protected APIs, job application CRUD, and a Streamlit dashboard UI.
