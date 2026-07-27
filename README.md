@@ -4,9 +4,13 @@ Career Pipeline is a job application tracking project built with FastAPI, SQLite
 
 The app allows users to register, log in, and manage job applications through a clean dashboard with full CRUD functionality.
 
-## Project Visual
+## Project Visuals
 
 ![Career Pipeline project flow](assets/project-pipeline-diagram.svg)
+
+## Handwritten Overview
+
+![Career Pipeline handwritten overview](assets/career-pipeline-handwritten-overview.png)
 
 ## Tech Stack
 
@@ -34,18 +38,12 @@ The app allows users to register, log in, and manage job applications through a 
 
 ```text
 User opens Streamlit app
-↓
-User registers or logs in
-↓
-FastAPI validates credentials
-↓
-Backend returns JWT token
-↓
-Streamlit stores token in session_state
-↓
-Frontend calls protected APIs with the token
-↓
-Dashboard loads and manages job applications
+-> User registers or logs in
+-> FastAPI validates credentials
+-> Backend returns JWT token
+-> Streamlit stores token in session_state
+-> Frontend calls protected APIs with the token
+-> Dashboard loads and manages job applications
 ```
 
 ## API Endpoints
@@ -76,6 +74,8 @@ app/
     applications.py
 assets/
   auth-career-hero.png
+  career-pipeline-handwritten-overview.png
+  project-pipeline-diagram.svg
 streamlit_app.py
 requirement.txt
 README.md

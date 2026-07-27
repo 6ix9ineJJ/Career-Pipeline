@@ -957,6 +957,23 @@ st.markdown(
         padding: 0.8rem 0.9rem;
     }
 
+    .delete-confirm-row {
+        align-items: center;
+        display: flex;
+        gap: 0.65rem;
+        margin: 0.35rem 0 0.85rem;
+    }
+
+    .delete-confirm-text {
+        color: #344054;
+        font-size: 0.9rem;
+        font-weight: 800;
+    }
+
+    .delete-box-spacer {
+        height: 0.1rem;
+    }
+
     .stCheckbox label {
         align-items: center !important;
         color: #475467 !important;
@@ -981,14 +998,97 @@ st.markdown(
         width: 1.05rem !important;
     }
 
+    .stCheckbox div[data-baseweb="checkbox"],
+    .stCheckbox [role="checkbox"],
+    .stCheckbox span[data-baseweb="checkbox"] > div,
+    .stCheckbox div[data-baseweb="checkbox"] > div {
+        background: #ffffff !important;
+        background-color: #ffffff !important;
+        border: 1.5px solid #cbd5e1 !important;
+        border-radius: 6px !important;
+        box-shadow: none !important;
+        color: #ffffff !important;
+        height: 1.05rem !important;
+        min-height: 1.05rem !important;
+        min-width: 1.05rem !important;
+        width: 1.05rem !important;
+    }
+
     .stCheckbox span[data-baseweb="checkbox"][aria-checked="true"] {
         background: #2563eb !important;
+        border-color: #2563eb !important;
+    }
+
+    .stCheckbox div[data-baseweb="checkbox"][aria-checked="true"],
+    .stCheckbox [role="checkbox"][aria-checked="true"],
+    .stCheckbox span[data-baseweb="checkbox"][aria-checked="true"] > div,
+    .stCheckbox div[data-baseweb="checkbox"][aria-checked="true"] > div {
+        background: #2563eb !important;
+        background-color: #2563eb !important;
         border-color: #2563eb !important;
     }
 
     .stCheckbox span[data-baseweb="checkbox"] svg {
         color: #ffffff !important;
         fill: #ffffff !important;
+    }
+
+    .stToggle label {
+        color: #344054 !important;
+        font-size: 0.88rem !important;
+        font-weight: 750 !important;
+    }
+
+    .stToggle [role="switch"] {
+        background: #ffffff !important;
+        border: 1.5px solid #111827 !important;
+        box-shadow: none !important;
+    }
+
+    .stToggle [role="switch"][aria-checked="true"] {
+        background: #2563eb !important;
+        border-color: #1d4ed8 !important;
+    }
+
+    .stToggle [role="switch"] > div {
+        background: #111827 !important;
+        box-shadow: none !important;
+    }
+
+    .stToggle [role="switch"][aria-checked="true"] > div {
+        background: #ffffff !important;
+    }
+
+    .stRadio [role="radiogroup"] {
+        background: #ffffff;
+        border: 1px solid #d0d5dd;
+        border-radius: 14px;
+        display: inline-flex;
+        gap: 0.35rem;
+        padding: 0.35rem;
+    }
+
+    .stRadio label {
+        align-items: center !important;
+        border-radius: 10px;
+        color: #344054 !important;
+        font-size: 0.86rem !important;
+        font-weight: 750 !important;
+        padding: 0.35rem 0.55rem !important;
+    }
+
+    .stRadio label:hover {
+        background: #f8fafc;
+    }
+
+    .stRadio label p {
+        color: inherit !important;
+        font-size: 0.86rem !important;
+        font-weight: 750 !important;
+    }
+
+    div[data-testid="stButton"] button:has(span:only-child) {
+        overflow: hidden;
     }
 
     div[data-testid="stVerticalBlock"] > div:has(> div[data-testid="stHorizontalBlock"]) {
@@ -1674,20 +1774,41 @@ def render_editors(applications: list[dict]) -> None:
                     key=f"edit_notes_{application['id']}",
                 )
 
+                save_submit = st.form_submit_button("Save changes", use_container_width=True)
+
+            confirm_key = f"delete_confirmed_{application['id']}"
+            if confirm_key not in st.session_state:
+                st.session_state[confirm_key] = False
+
+            st.markdown(
+                "<div class='delete-warning'>Deleting is permanent. Tick the confirmation box before using Delete Job.</div>",
+                unsafe_allow_html=True,
+            )
+            confirm_delete = st.session_state[confirm_key]
+            confirm_cols = st.columns([0.1, 0.9], gap="small")
+            with confirm_cols[0]:
+                st.markdown("<div class='delete-box-spacer'></div>", unsafe_allow_html=True)
+                box_label = "✓" if confirm_delete else " "
+                if st.button(
+                    box_label,
+                    key=f"confirm_delete_box_{application['id']}",
+                    type="primary" if confirm_delete else "secondary",
+                    use_container_width=True,
+                ):
+                    st.session_state[confirm_key] = not confirm_delete
+                    st.rerun()
+            with confirm_cols[1]:
                 st.markdown(
-                    "<div class='delete-warning'>Deleting is permanent. Tick the confirmation box before using Delete Job.</div>",
+                    "<div class='delete-confirm-row'><span class='delete-confirm-text'>I understand and want to delete this job</span></div>",
                     unsafe_allow_html=True,
                 )
-                confirm_delete = st.checkbox(
-                    "I understand and want to delete this job",
-                    key=f"confirm_delete_{application['id']}",
-                )
 
-                action_cols = st.columns(2)
-                with action_cols[0]:
-                    save_submit = st.form_submit_button("Save changes", use_container_width=True)
-                with action_cols[1]:
-                    delete_submit = st.form_submit_button("Delete job", use_container_width=True)
+            delete_submit = st.button(
+                "Delete job",
+                key=f"delete_job_{application['id']}",
+                use_container_width=True,
+            )
+            confirm_delete = st.session_state[confirm_key]
 
             if save_submit:
                 update_response = requests.put(
